@@ -4,6 +4,7 @@ import com.photoviewer.image.ImageManager;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -112,6 +113,13 @@ public class MainWindow {
                 }
             }
         });
+
+        // Set application icon
+        try {
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/icon.png")));
+        } catch (Exception e) {
+            System.out.println("Favicon not found, using default");
+        }
 
         stage.setScene(scene);
         stage.setTitle("PhotoViewer");
