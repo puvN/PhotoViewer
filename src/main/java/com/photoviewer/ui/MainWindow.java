@@ -1,0 +1,251 @@
+package com.photoviewer.ui;
+
+import com.photoviewer.image.ImageManager;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+
+import java.io.File;
+
+/**
+ * Main application window with menu bar, tool panel, image canvas, and AI chat
+ * panel.
+ */
+public class MainWindow {
+    private final Stage stage;
+    private final BorderPane root;
+    private final ImageCanvas imageCanvas;
+    private final ToolPanel toolPanel;
+    private final AIChatPanel aiChatPanel;
+    private final ImageManager imageManager;
+
+    public MainWindow(Stage stage) {
+        this.stage = stage;
+        this.imageManager = new ImageManager();
+        this.root = new BorderPane();
+
+        // Initialize components
+        this.imageCanvas = new ImageCanvas(imageManager);
+        this.toolPanel = new ToolPanel(imageCanvas, imageManager, this);
+        this.aiChatPanel = new AIChatPanel(imageCanvas, imageManager);
+
+        setupUI();
+        setupMenuBar();
+    }
+
+    private void setupUI() {
+        // Set up layout
+        root.setCenter(imageCanvas);
+        root.setLeft(toolPanel);
+        // AI panel is hidden by default - will be shown via toggle button
+
+        // Create scene
+        Scene scene = new Scene(root, 1200, 800);
+
+        // Load CSS if available
+        try {
+            String css = getClass().getResource("/styles.css").toExternalForm();
+            scene.getStylesheets().add(css);
+        } catch (Exception e) {
+            System.out.println("CSS file not found, using default styles");
+        }
+
+        // Add keyboard shortcuts
+        scene.setOnKeyPressed(event -> {
+            if (event.isControlDown()) {
+                switch (event.getCode()) {
+                    case Z:
+                        // Undo
+                        imageManager.undo();
+                        imageCanvas.displayImage();
+                        event.consume();
+                        break;
+                    case Y:
+                        // Redo
+                        imageManager.redo();
+                        imageCanvas.displayImage();
+                        event.consume();
+                        break;
+                    case O:
+                        // Open
+                        openImage();
+                        event.consume();
+                        break;
+                    case S:
+                        // Save
+                        saveImage();
+                        event.consume();
+                        break;
+                }
+            }
+        });
+
+        stage.setScene(scene);
+        stage.setTitle("PhotoViewer");
+        stage.setMinWidth(800);
+        stage.setMinHeight(600);
+    }
+
+    private void setupMenuBar() {
+        MenuBar menuBar = new MenuBar();
+
+        // File Menu
+        Menu fileMenu = new Menu("File");
+        MenuItem openItem = new MenuItem("Open Image...");
+        openItem.setOnAction(e -> openImage());
+
+        MenuItem saveItem = new MenuItem("Save");
+        saveItem.setOnAction(e -> imageManager.saveImage());
+
+        MenuItem saveAsItem = new MenuItem("Save As...");
+        saveAsItem.setOnAction(e -> imageManager.saveImageAs());
+
+        MenuItem exitItem = new MenuItem("Exit");
+        exitItem.setOnAction(e -> stage.close());
+
+        fileMenu.getItems().addAll(openItem, saveItem, saveAsItem, new SeparatorMenuItem(), exitItem);
+
+        // Edit Menu
+        Menu editMenu = new Menu("Edit");
+        MenuItem undoItem = new MenuItem("Undo");
+        undoItem.setOnAction(e -> imageManager.undo());
+
+        MenuItem redoItem = new MenuItem("Redo");
+        redoItem.setOnAction(e -> imageManager.redo());
+
+        MenuItem resizeItem = new MenuItem("Resize Image...");
+        resizeItem.setOnAction(e -> showResizeDialog());
+
+        editMenu.getItems().addAll(undoItem, redoItem, new SeparatorMenuItem(), resizeItem);
+
+        // View Menu
+        Menu viewMenu = new Menu("View");
+        MenuItem zoomInItem = new MenuItem("Zoom In");
+        zoomInItem.setOnAction(e -> imageCanvas.zoomIn());
+
+        MenuItem zoomOutItem = new MenuItem("Zoom Out");
+        zoomOutItem.setOnAction(e -> imageCanvas.zoomOut());
+
+        MenuItem fitToWindowItem = new MenuItem("Fit to Window");
+        fitToWindowItem.setOnAction(e -> imageCanvas.fitToWindow());
+
+        CheckMenuItem toggleAIPanelItem = new CheckMenuItem("Show AI Chat");
+        toggleAIPanelItem.setSelected(false); // Hidden by default
+        toggleAIPanelItem.setOnAction(e -> {
+            if (toggleAIPanelItem.isSelected()) {
+                root.setRight(aiChatPanel);
+            } else {
+                root.setRight(null);
+            }
+        });
+
+        viewMenu.getItems().addAll(zoomInItem, zoomOutItem, fitToWindowItem,
+                new SeparatorMenuItem(), toggleAIPanelItem);
+
+        // AI Menu
+        Menu aiMenu = new Menu("AI");
+        MenuItem configureAPIItem = new MenuItem("Configure API Keys...");
+        configureAPIItem.setOnAction(e -> aiChatPanel.showAPIConfiguration());
+
+        aiMenu.getItems().add(configureAPIItem);
+
+        menuBar.getMenus().addAll(fileMenu, editMenu, viewMenu, aiMenu);
+        root.setTop(menuBar);
+    }
+
+    private void openImage() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open Image");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("All Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"),
+                new FileChooser.ExtensionFilter("PNG", "*.png"),
+                new FileChooser.ExtensionFilter("JPEG", "*.jpg", "*.jpeg"),
+                new FileChooser.ExtensionFilter("GIF", "*.gif"),
+                new FileChooser.ExtensionFilter("BMP", "*.bmp"),
+                new FileChooser.ExtensionFilter("WebP", "*.webp"));
+
+        File file = fileChooser.showOpenDialog(stage);
+        if (file != null) {
+            imageManager.loadImage(file);
+            imageCanvas.displayImage();
+            imageCanvas.fitToWindow(); // Auto-fit when opening image
+            stage.setTitle("PhotoViewer - " + file.getName());
+        }
+    }
+
+    private void showResizeDialog() {
+        if (imageManager.getCurrentImage() == null) {
+            showAlert("No Image", "Please open an image first.");
+            return;
+        }
+
+        Dialog<int[]> dialog = new Dialog<>();
+        dialog.setTitle("Resize Image");
+        dialog.setHeaderText("Enter new dimensions:");
+
+        ButtonType resizeButtonType = new ButtonType("Resize", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(resizeButtonType, ButtonType.CANCEL);
+
+        TextField widthField = new TextField(String.valueOf(imageManager.getCurrentImage().getWidth()));
+        TextField heightField = new TextField(String.valueOf(imageManager.getCurrentImage().getHeight()));
+
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new Label("Width:"), 0, 0);
+        grid.add(widthField, 1, 0);
+        grid.add(new Label("Height:"), 0, 1);
+        grid.add(heightField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == resizeButtonType) {
+                try {
+                    int width = Integer.parseInt(widthField.getText());
+                    int height = Integer.parseInt(heightField.getText());
+                    return new int[] { width, height };
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(dimensions -> {
+            if (dimensions != null && dimensions.length == 2) {
+                imageManager.resizeImage(dimensions[0], dimensions[1]);
+                imageCanvas.displayImage();
+            }
+        });
+    }
+
+    private void showAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    private void saveImage() {
+        imageManager.saveImage();
+    }
+
+    public void show() {
+        stage.show();
+    }
+
+    /**
+     * Toggle the AI chat panel visibility.
+     */
+    public void toggleAIPanel() {
+        if (root.getRight() == null) {
+            root.setRight(aiChatPanel);
+        } else {
+            root.setRight(null);
+        }
+    }
+}
