@@ -299,6 +299,12 @@ public class ImageCanvas extends Pane {
         canvas.setCursor(cursor);
     }
 
+    public void copyToClipboard() {
+        if (currentTool instanceof ScissorsTool) {
+            ((ScissorsTool) currentTool).copyToSystemClipboard();
+        }
+    }
+
     public void applyCurrentDrawing() {
         if (drawingLayer != null) {
             imageManager.applyDrawing(drawingLayer);

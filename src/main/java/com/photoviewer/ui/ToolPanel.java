@@ -3,7 +3,6 @@ package com.photoviewer.ui;
 import com.photoviewer.image.ImageManager;
 import com.photoviewer.tools.PencilTool;
 import com.photoviewer.tools.ScissorsTool;
-import com.photoviewer.tools.SelectionTool;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -18,7 +17,6 @@ public class ToolPanel extends VBox {
     private final ImageManager imageManager;
     private final MainWindow mainWindow;
 
-    private SelectionTool selectionTool;
     private ScissorsTool scissorsTool;
     private PencilTool pencilTool;
 
@@ -39,7 +37,6 @@ public class ToolPanel extends VBox {
     }
 
     private void initializeTools() {
-        selectionTool = new SelectionTool(imageManager);
         scissorsTool = new ScissorsTool(imageManager);
         pencilTool = new PencilTool(canvas);
     }
@@ -68,31 +65,6 @@ public class ToolPanel extends VBox {
 
         Separator sep1 = new Separator();
 
-        // Tool buttons
-        ToggleButton selectionBtn = createToolButton("Select");
-        selectionBtn.setToggleGroup(toolGroup);
-        selectionBtn.setOnAction(e -> {
-            if (selectionBtn.isSelected()) {
-                // Apply any pending drawing first
-                if (canvas.getDrawingLayer() != null) {
-                    imageManager.applyDrawing(canvas.getDrawingLayer());
-                    canvas.clearDrawingLayer();
-                    canvas.displayImage();
-                }
-                canvas.setTool(selectionTool);
-            } else {
-                canvas.setTool(null);
-            }
-        });
-
-        Button cropBtn = createButton("Crop");
-        cropBtn.setOnAction(e -> {
-            if (selectionTool.hasSelection()) {
-                selectionTool.cropToSelection();
-                canvas.displayImage();
-            }
-        });
-
         ToggleButton scissorsBtn = createToolButton("Scissors");
         scissorsBtn.setToggleGroup(toolGroup);
         scissorsBtn.setOnAction(e -> {
@@ -109,12 +81,6 @@ public class ToolPanel extends VBox {
                 canvas.setTool(null);
                 canvas.setCanvasCursor(javafx.scene.Cursor.DEFAULT);
             }
-        });
-
-        Button pasteBtn = createButton("Paste");
-        pasteBtn.setOnAction(e -> {
-            scissorsTool.pasteFloatingRegion();
-            canvas.displayImage();
         });
 
         Separator sep2 = new Separator();
@@ -174,8 +140,7 @@ public class ToolPanel extends VBox {
                 title,
                 zoomInBtn, zoomOutBtn, fitBtn,
                 sep1,
-                selectionBtn, cropBtn,
-                scissorsBtn, pasteBtn,
+                scissorsBtn,
                 sep2,
                 pencilBtn,
                 sep3,

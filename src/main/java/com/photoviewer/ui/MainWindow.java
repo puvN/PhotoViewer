@@ -78,6 +78,11 @@ public class MainWindow {
                         saveImage();
                         event.consume();
                         break;
+                    case C:
+                        // Copy to clipboard
+                        imageCanvas.copyToClipboard();
+                        event.consume();
+                        break;
                 }
             }
         });

@@ -4,11 +4,15 @@ import com.photoviewer.image.ImageManager;
 import com.photoviewer.image.ImageOperations;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.embed.swing.SwingFXUtils;
 
 import java.awt.image.BufferedImage;
 
 /**
- * Scissors tool for selecting, moving, and pasting image regions.
+ * Scissors tool for selecting image regions and copying them to the system
+ * clipboard.
  */
 public class ScissorsTool implements Tool {
     private final ImageManager imageManager;
@@ -18,43 +22,23 @@ public class ScissorsTool implements Tool {
     private boolean isSelecting = false;
     private boolean hasSelection = false;
 
-    // Floating region
-    private BufferedImage floatingRegion;
-    private double floatingX, floatingY;
-    private boolean isDraggingRegion = false;
-
     public ScissorsTool(ImageManager imageManager) {
         this.imageManager = imageManager;
     }
 
     @Override
     public void onMousePressed(double x, double y) {
-        if (floatingRegion != null && isPointInFloatingRegion(x, y)) {
-            // Start dragging the floating region
-            isDraggingRegion = true;
-            startX = x;
-            startY = y;
-        } else {
-            // Start new selection
-            startX = x;
-            startY = y;
-            endX = x;
-            endY = y;
-            isSelecting = true;
-            hasSelection = false;
-        }
+        startX = x;
+        startY = y;
+        endX = x;
+        endY = y;
+        isSelecting = true;
+        hasSelection = false;
     }
 
     @Override
     public void onMouseDragged(double x, double y) {
-        if (isDraggingRegion) {
-            double dx = x - startX;
-            double dy = y - startY;
-            floatingX += dx;
-            floatingY += dy;
-            startX = x;
-            startY = y;
-        } else if (isSelecting) {
+        if (isSelecting) {
             endX = x;
             endY = y;
         }
@@ -62,20 +46,16 @@ public class ScissorsTool implements Tool {
 
     @Override
     public void onMouseReleased(double x, double y) {
-        if (isDraggingRegion) {
-            isDraggingRegion = false;
-        } else if (isSelecting) {
+        if (isSelecting) {
             endX = x;
             endY = y;
             isSelecting = false;
             hasSelection = true;
-            extractSelection();
         }
     }
 
     @Override
     public void draw(GraphicsContext gc) {
-        // Draw selection rectangle
         if (isSelecting || hasSelection) {
             double x = Math.min(startX, endX);
             double y = Math.min(startY, endY);
@@ -88,64 +68,38 @@ public class ScissorsTool implements Tool {
             gc.strokeRect(x, y, width, height);
             gc.setLineDashes(null);
         }
-
-        // Draw floating region
-        if (floatingRegion != null) {
-            javafx.scene.image.Image fxImage = javafx.embed.swing.SwingFXUtils.toFXImage(floatingRegion, null);
-            gc.drawImage(fxImage, floatingX, floatingY);
-
-            // Draw border around floating region
-            gc.setStroke(Color.LIME);
-            gc.setLineWidth(2.0);
-            gc.strokeRect(floatingX, floatingY, floatingRegion.getWidth(), floatingRegion.getHeight());
-        }
     }
 
     @Override
     public void reset() {
         isSelecting = false;
         hasSelection = false;
-        floatingRegion = null;
-        isDraggingRegion = false;
     }
 
-    private void extractSelection() {
+    /**
+     * Copy the selected region to the system clipboard.
+     */
+    public void copyToSystemClipboard() {
         if (hasSelection && imageManager.getCurrentImage() != null) {
             int x = (int) Math.min(startX, endX);
             int y = (int) Math.min(startY, endY);
             int width = (int) Math.abs(endX - startX);
             int height = (int) Math.abs(endY - startY);
 
-            floatingRegion = ImageOperations.copyRegion(imageManager.getCurrentImage(), x, y, width, height);
-            floatingX = x;
-            floatingY = y;
-        }
-    }
+            if (width > 0 && height > 0) {
+                BufferedImage selection = ImageOperations.copyRegion(imageManager.getCurrentImage(), x, y, width,
+                        height);
+                if (selection != null) {
+                    Clipboard clipboard = Clipboard.getSystemClipboard();
+                    ClipboardContent content = new ClipboardContent();
 
-    private boolean isPointInFloatingRegion(double x, double y) {
-        if (floatingRegion == null)
-            return false;
-        return x >= floatingX && x <= floatingX + floatingRegion.getWidth() &&
-                y >= floatingY && y <= floatingY + floatingRegion.getHeight();
-    }
+                    // Convert BufferedImage to JavaFX Image
+                    javafx.scene.image.Image fxImage = SwingFXUtils.toFXImage(selection, null);
+                    content.putImage(fxImage);
 
-    /**
-     * Paste the floating region to the image at its current position.
-     */
-    public void pasteFloatingRegion() {
-        if (floatingRegion != null) {
-            imageManager.pasteRegion(floatingRegion, (int) floatingX, (int) floatingY);
-            floatingRegion = null;
-        }
-    }
-
-    /**
-     * Copy the floating region (duplicate it).
-     */
-    public void copyFloatingRegion() {
-        // Keep the floating region for multiple pastes
-        if (floatingRegion != null) {
-            imageManager.pasteRegion(floatingRegion, (int) floatingX, (int) floatingY);
+                    clipboard.setContent(content);
+                }
+            }
         }
     }
 }
