@@ -85,6 +85,27 @@ public class ImageOperations {
     }
 
     /**
+     * Rotate an image 90 degrees to the right.
+     */
+    public static BufferedImage rotate90Right(BufferedImage original) {
+        int width = original.getWidth();
+        int height = original.getHeight();
+
+        // Swap width and height for the new image
+        BufferedImage rotated = new BufferedImage(height, width, original.getType());
+        Graphics2D g = rotated.createGraphics();
+
+        // Setup rotation
+        g.translate(height, 0);
+        g.rotate(Math.toRadians(90));
+
+        g.drawImage(original, 0, 0, null);
+        g.dispose();
+
+        return rotated;
+    }
+
+    /**
      * Create a blank transparent image.
      */
     public static BufferedImage createTransparentImage(int width, int height) {

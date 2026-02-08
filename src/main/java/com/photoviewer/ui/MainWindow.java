@@ -6,6 +6,10 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.geometry.Pos;
+import javafx.geometry.Insets;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -40,10 +44,19 @@ public class MainWindow {
     }
 
     private void setupUI() {
-        // Set up layout
         root.setCenter(imageCanvas);
         root.setLeft(toolPanel);
-        root.setBottom(thumbnailBar);
+
+        // Create hint bar
+        Label hintLabel = new Label("R: Rotate | ↑/↓: Zoom | ←/→: Navigation | Ctrl+Z/Y: Undo/Redo");
+        hintLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 11px;");
+        HBox hintBar = new HBox(hintLabel);
+        hintBar.setAlignment(Pos.CENTER);
+        hintBar.setPadding(new Insets(2, 10, 2, 10));
+        hintBar.setStyle("-fx-background-color: #333333;");
+
+        VBox bottomContainer = new VBox(thumbnailBar, hintBar);
+        root.setBottom(bottomContainer);
         // AI panel is hidden by default - will be shown via toggle button
 
         // Create scene
@@ -108,6 +121,20 @@ public class MainWindow {
                             updateTitle();
                             thumbnailBar.updateThumbnails();
                         }
+                        event.consume();
+                        break;
+                    case R:
+                        imageManager.rotateImage90Right();
+                        imageCanvas.displayImage();
+                        imageCanvas.fitToWindow();
+                        event.consume();
+                        break;
+                    case UP:
+                        imageCanvas.zoomIn();
+                        event.consume();
+                        break;
+                    case DOWN:
+                        imageCanvas.zoomOut();
                         event.consume();
                         break;
                 }

@@ -141,6 +141,17 @@ public class ImageManager {
     }
 
     /**
+     * Rotate the current image 90 degrees to the right.
+     */
+    public void rotateImage90Right() {
+        if (currentImage != null) {
+            saveToUndoStack();
+            currentImage = ImageOperations.rotate90Right(currentImage);
+            redoStack.clear();
+        }
+    }
+
+    /**
      * Paste an image region at the specified location.
      */
     public void pasteRegion(BufferedImage region, int x, int y) {
