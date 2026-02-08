@@ -8,3 +8,5 @@ target/
 *.class
 .DS_Store
 Thumbs.db
+wix-tools/
+wix311-binaries.zip

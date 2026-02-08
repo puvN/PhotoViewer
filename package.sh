@@ -25,6 +25,13 @@ OS_TYPE=$(uname -s)
 case "$OS_TYPE" in
     MINGW*|MSYS*|CYGWIN*|Windows*)
         echo "Step 2: Creating Windows installer..."
+        
+        # Add local WiX tools to PATH if they exist
+        if [ -d "wix-tools" ]; then
+            echo "Using local WiX tools from wix-tools directory"
+            export PATH="$PATH:$(pwd)/wix-tools"
+        fi
+
         jpackage \
             --input target \
             --name "$APP_NAME" \
