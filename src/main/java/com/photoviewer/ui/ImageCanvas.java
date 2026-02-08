@@ -10,6 +10,8 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.control.ScrollBar;
+import javafx.geometry.Orientation;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 
@@ -22,6 +24,9 @@ import java.awt.image.BufferedImage;
 public class ImageCanvas extends Pane {
     private final Canvas canvas;
     private final ImageManager imageManager;
+
+    private final ScrollBar hBar;
+    private final ScrollBar vBar;
 
     private double zoomLevel = 1.0;
     private double offsetX = 0;
@@ -38,21 +43,66 @@ public class ImageCanvas extends Pane {
     public ImageCanvas(ImageManager imageManager) {
         this.imageManager = imageManager;
         this.canvas = new Canvas();
+        this.hBar = new ScrollBar();
+        this.vBar = new ScrollBar();
 
-        getChildren().add(canvas);
+        hBar.setOrientation(Orientation.HORIZONTAL);
+        vBar.setOrientation(Orientation.VERTICAL);
+        hBar.setVisible(false);
+        vBar.setVisible(false);
+
+        getChildren().addAll(canvas, hBar, vBar);
 
         // Bind canvas size to pane size
         canvas.widthProperty().bind(widthProperty());
         canvas.heightProperty().bind(heightProperty());
 
         // Redraw when size changes
-        widthProperty().addListener((obs, oldVal, newVal) -> displayImage());
-        heightProperty().addListener((obs, oldVal, newVal) -> displayImage());
+        widthProperty().addListener((obs, oldVal, newVal) -> {
+            updateScrollBarPositions();
+            displayImage();
+        });
+        heightProperty().addListener((obs, oldVal, newVal) -> {
+            updateScrollBarPositions();
+            displayImage();
+        });
 
+        setupScrollBarHandlers();
         setupMouseHandlers();
 
         // Set default background
         setStyle("-fx-background-color: #2b2b2b;");
+    }
+
+    private void setupScrollBarHandlers() {
+        hBar.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (hBar.isFocused() || hBar.isHover()) {
+                offsetX = -newVal.doubleValue();
+                displayImage();
+            }
+        });
+        vBar.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (vBar.isFocused() || vBar.isHover()) {
+                offsetY = -newVal.doubleValue();
+                displayImage();
+            }
+        });
+    }
+
+    private void updateScrollBarPositions() {
+        double w = getWidth();
+        double h = getHeight();
+        double barWidth = 15;
+
+        hBar.setLayoutX(0);
+        hBar.setLayoutY(h - barWidth);
+        hBar.setPrefWidth(w - (vBar.isVisible() ? barWidth : 0));
+        hBar.setPrefHeight(barWidth);
+
+        vBar.setLayoutX(w - barWidth);
+        vBar.setLayoutY(0);
+        vBar.setPrefWidth(barWidth);
+        vBar.setPrefHeight(h - (hBar.isVisible() ? barWidth : 0));
     }
 
     private void setupMouseHandlers() {
@@ -166,6 +216,47 @@ public class ImageCanvas extends Pane {
             currentTool.draw(gc);
             gc.restore();
         }
+
+        updateScrollBars(image.getWidth(), image.getHeight(), zoomedWidth, zoomedHeight);
+    }
+
+    private void updateScrollBars(double imgW, double imgH, double zoomedW, double zoomedH) {
+        double viewW = getWidth();
+        double viewH = getHeight();
+
+        // Horizontal scrollbar
+        if (zoomedW > viewW) {
+            hBar.setVisible(true);
+            double hLimit = (zoomedW - viewW) / 2;
+            if (hLimit < 0)
+                hLimit = 0;
+
+            hBar.setMin(-hLimit);
+            hBar.setMax(hLimit);
+            hBar.setValue(-offsetX);
+            hBar.setVisibleAmount(viewW / zoomedW * (hLimit * 2));
+        } else {
+            hBar.setVisible(false);
+            offsetX = 0;
+        }
+
+        // Vertical scrollbar
+        if (zoomedH > viewH) {
+            vBar.setVisible(true);
+            double vLimit = (zoomedH - viewH) / 2;
+            if (vLimit < 0)
+                vLimit = 0;
+
+            vBar.setMin(-vLimit);
+            vBar.setMax(vLimit);
+            vBar.setValue(-offsetY);
+            vBar.setVisibleAmount(viewH / zoomedH * (vLimit * 2));
+        } else {
+            vBar.setVisible(false);
+            offsetY = 0;
+        }
+
+        updateScrollBarPositions();
     }
 
     public void zoomIn() {
