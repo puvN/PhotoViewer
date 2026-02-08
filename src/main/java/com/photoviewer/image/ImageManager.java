@@ -21,6 +21,7 @@ import java.util.Stack;
  */
 public class ImageManager {
     private BufferedImage currentImage;
+    private Image currentImageFX;
     private File currentFile;
     private Stack<BufferedImage> undoStack;
     private Stack<BufferedImage> redoStack;
@@ -36,14 +37,30 @@ public class ImageManager {
      * Load an image from a file.
      */
     public boolean loadImage(File file) {
+        return loadImage(file, false);
+    }
+
+    /**
+     * Load an image from a file, optionally clearing the undo/redo stacks.
+     */
+    public boolean loadImage(File file, boolean clearHistory) {
         try {
             BufferedImage image = ImageIO.read(file);
             if (image != null) {
-                saveToUndoStack();
+                if (clearHistory) {
+                    undoStack.clear();
+                    redoStack.clear();
+                } else {
+                    saveToUndoStack();
+                }
                 this.currentImage = image;
+                this.currentImageFX = null; // Clear cache
                 this.currentFile = file;
                 this.redoStack.clear();
                 updateDirectoryFiles(file);
+                if (clearHistory) {
+                    System.gc(); // Clean up previous images
+                }
                 return true;
             }
         } catch (IOException e) {
@@ -114,6 +131,7 @@ public class ImageManager {
         if (currentImage != null) {
             saveToUndoStack();
             currentImage = ImageOperations.resize(currentImage, newWidth, newHeight);
+            currentImageFX = null; // Clear cache
             redoStack.clear();
         }
     }
@@ -125,6 +143,7 @@ public class ImageManager {
         if (currentImage != null) {
             saveToUndoStack();
             currentImage = ImageOperations.crop(currentImage, x, y, width, height);
+            currentImageFX = null; // Clear cache
             redoStack.clear();
         }
     }
@@ -136,6 +155,7 @@ public class ImageManager {
         if (currentImage != null) {
             saveToUndoStack();
             currentImage = ImageOperations.mergeImages(currentImage, drawingLayer);
+            currentImageFX = null; // Clear cache
             redoStack.clear();
         }
     }
@@ -147,6 +167,7 @@ public class ImageManager {
         if (currentImage != null) {
             saveToUndoStack();
             currentImage = ImageOperations.rotate90Right(currentImage);
+            currentImageFX = null; // Clear cache
             redoStack.clear();
         }
     }
@@ -158,6 +179,7 @@ public class ImageManager {
         if (currentImage != null) {
             saveToUndoStack();
             currentImage = ImageOperations.pasteRegion(currentImage, region, x, y);
+            currentImageFX = null; // Clear cache
             redoStack.clear();
         }
     }
@@ -169,6 +191,7 @@ public class ImageManager {
         if (!undoStack.isEmpty()) {
             redoStack.push(copyImage(currentImage));
             currentImage = undoStack.pop();
+            currentImageFX = null; // Clear cache
         }
     }
 
@@ -179,6 +202,7 @@ public class ImageManager {
         if (!redoStack.isEmpty()) {
             undoStack.push(copyImage(currentImage));
             currentImage = redoStack.pop();
+            currentImageFX = null; // Clear cache
         }
     }
 
@@ -186,8 +210,9 @@ public class ImageManager {
         if (currentImage != null) {
             undoStack.push(copyImage(currentImage));
             // Limit undo stack size to prevent memory issues
-            if (undoStack.size() > 20) {
+            if (undoStack.size() > 3) {
                 undoStack.remove(0);
+                System.gc(); // Hint cleanup when removing history
             }
         }
     }
@@ -205,7 +230,10 @@ public class ImageManager {
      */
     public Image getCurrentImageFX() {
         if (currentImage != null) {
-            return SwingFXUtils.toFXImage(currentImage, null);
+            if (currentImageFX == null) {
+                currentImageFX = SwingFXUtils.toFXImage(currentImage, null);
+            }
+            return currentImageFX;
         }
         return null;
     }
@@ -223,6 +251,7 @@ public class ImageManager {
     public void setCurrentImage(BufferedImage image) {
         saveToUndoStack();
         this.currentImage = image;
+        this.currentImageFX = null; // Clear cache
         redoStack.clear();
     }
 
@@ -256,14 +285,14 @@ public class ImageManager {
 
     public boolean loadNextImage() {
         if (directoryFiles.size() > 1 && currentIndex < directoryFiles.size() - 1) {
-            return loadImage(directoryFiles.get(currentIndex + 1));
+            return loadImage(directoryFiles.get(currentIndex + 1), true);
         }
         return false;
     }
 
     public boolean loadPreviousImage() {
         if (directoryFiles.size() > 1 && currentIndex > 0) {
-            return loadImage(directoryFiles.get(currentIndex - 1));
+            return loadImage(directoryFiles.get(currentIndex - 1), true);
         }
         return false;
     }

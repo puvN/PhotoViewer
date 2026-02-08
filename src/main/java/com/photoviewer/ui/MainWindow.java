@@ -234,7 +234,7 @@ public class MainWindow {
 
         File file = fileChooser.showOpenDialog(stage);
         if (file != null) {
-            if (imageManager.loadImage(file)) {
+            if (imageManager.loadImage(file, true)) {
                 imageCanvas.displayImage();
                 imageCanvas.fitToWindow();
                 updateTitle();

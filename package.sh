@@ -6,7 +6,7 @@
 # Configuration
 APP_NAME="PhotoViewer"
 APP_VERSION="1.0.0"
-MAIN_CLASS="com.photoviewer.PhotoViewerApp"
+MAIN_CLASS="com.photoviewer.AppLauncher"
 MAIN_JAR="target/photoviewer-1.0.0.jar"
 
 echo "Building PhotoViewer native installer..."
