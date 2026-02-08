@@ -3,7 +3,6 @@ package com.photoviewer.ui;
 import com.photoviewer.image.ImageManager;
 import com.photoviewer.image.ImageOperations;
 import com.photoviewer.tools.*;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 

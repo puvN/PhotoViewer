@@ -3,6 +3,7 @@ package com.photoviewer.ui;
 import com.photoviewer.image.ImageManager;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -19,6 +20,7 @@ public class MainWindow {
     private final ImageCanvas imageCanvas;
     private final ToolPanel toolPanel;
     private final AIChatPanel aiChatPanel;
+    private final ThumbnailBar thumbnailBar;
     private final ImageManager imageManager;
 
     public MainWindow(Stage stage) {
@@ -30,6 +32,7 @@ public class MainWindow {
         this.imageCanvas = new ImageCanvas(imageManager);
         this.toolPanel = new ToolPanel(imageCanvas, imageManager, this);
         this.aiChatPanel = new AIChatPanel(imageCanvas, imageManager);
+        this.thumbnailBar = new ThumbnailBar(imageManager);
 
         setupUI();
         setupMenuBar();
@@ -39,6 +42,7 @@ public class MainWindow {
         // Set up layout
         root.setCenter(imageCanvas);
         root.setLeft(toolPanel);
+        root.setBottom(thumbnailBar);
         // AI panel is hidden by default - will be shown via toggle button
 
         // Create scene
@@ -53,7 +57,7 @@ public class MainWindow {
         }
 
         // Add keyboard shortcuts
-        scene.setOnKeyPressed(event -> {
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.isControlDown()) {
                 switch (event.getCode()) {
                     case Z:
@@ -81,6 +85,28 @@ public class MainWindow {
                     case C:
                         // Copy to clipboard
                         imageCanvas.copyToClipboard();
+                        event.consume();
+                        break;
+                }
+            } else {
+                // Single key shortcuts
+                switch (event.getCode()) {
+                    case RIGHT:
+                        if (imageManager.loadNextImage()) {
+                            imageCanvas.displayImage();
+                            imageCanvas.fitToWindow();
+                            updateTitle();
+                            thumbnailBar.updateThumbnails();
+                        }
+                        event.consume();
+                        break;
+                    case LEFT:
+                        if (imageManager.loadPreviousImage()) {
+                            imageCanvas.displayImage();
+                            imageCanvas.fitToWindow();
+                            updateTitle();
+                            thumbnailBar.updateThumbnails();
+                        }
                         event.consume();
                         break;
                 }
@@ -173,10 +199,21 @@ public class MainWindow {
 
         File file = fileChooser.showOpenDialog(stage);
         if (file != null) {
-            imageManager.loadImage(file);
-            imageCanvas.displayImage();
-            imageCanvas.fitToWindow(); // Auto-fit when opening image
+            if (imageManager.loadImage(file)) {
+                imageCanvas.displayImage();
+                imageCanvas.fitToWindow();
+                updateTitle();
+                thumbnailBar.updateThumbnails();
+            }
+        }
+    }
+
+    private void updateTitle() {
+        File file = imageManager.getCurrentFile();
+        if (file != null) {
             stage.setTitle("PhotoViewer - " + file.getName());
+        } else {
+            stage.setTitle("PhotoViewer");
         }
     }
 

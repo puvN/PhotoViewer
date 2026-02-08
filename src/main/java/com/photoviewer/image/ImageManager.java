@@ -9,6 +9,10 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Stack;
 
 /**
@@ -20,6 +24,8 @@ public class ImageManager {
     private File currentFile;
     private Stack<BufferedImage> undoStack;
     private Stack<BufferedImage> redoStack;
+    private List<File> directoryFiles = new ArrayList<>();
+    private int currentIndex = -1;
 
     public ImageManager() {
         this.undoStack = new Stack<>();
@@ -37,6 +43,7 @@ public class ImageManager {
                 this.currentImage = image;
                 this.currentFile = file;
                 this.redoStack.clear();
+                updateDirectoryFiles(file);
                 return true;
             }
         } catch (IOException e) {
@@ -218,5 +225,53 @@ public class ImageManager {
 
     public boolean canRedo() {
         return !redoStack.isEmpty();
+    }
+
+    private void updateDirectoryFiles(File file) {
+        File parent = file.getParentFile();
+        if (parent != null && parent.isDirectory()) {
+            File[] files = parent.listFiles((dir, name) -> {
+                String lower = name.toLowerCase();
+                return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                        || lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".webp");
+            });
+            if (files != null) {
+                directoryFiles = new ArrayList<>(Arrays.asList(files));
+                Collections.sort(directoryFiles);
+                currentIndex = directoryFiles.indexOf(file);
+            }
+        }
+    }
+
+    public boolean loadNextImage() {
+        if (directoryFiles.size() > 1 && currentIndex < directoryFiles.size() - 1) {
+            return loadImage(directoryFiles.get(currentIndex + 1));
+        }
+        return false;
+    }
+
+    public boolean loadPreviousImage() {
+        if (directoryFiles.size() > 1 && currentIndex > 0) {
+            return loadImage(directoryFiles.get(currentIndex - 1));
+        }
+        return false;
+    }
+
+    public File getNextFile() {
+        if (directoryFiles.size() > 1 && currentIndex < directoryFiles.size() - 1) {
+            return directoryFiles.get(currentIndex + 1);
+        }
+        return null;
+    }
+
+    public File getPreviousFile() {
+        if (directoryFiles.size() > 1 && currentIndex > 0) {
+            return directoryFiles.get(currentIndex - 1);
+        }
+        return null;
+    }
+
+    public List<File> getDirectoryFiles() {
+        return directoryFiles;
     }
 }
